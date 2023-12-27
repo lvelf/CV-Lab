@@ -8,7 +8,7 @@ import torchvision.transforms as transforms
 def Dataset():
     transform = transforms.Compose([
     transforms.ToTensor(),
-    transforms.Normalize((0.1307,), (0.3081,)) # MNIST数据集的均值和标准差
+    transforms.Normalize((0.1307,), (0.3081,))
     ])
 
     trainset = torchvision.datasets.MNIST(root='./data', train=True, download=True, transform=transform)
