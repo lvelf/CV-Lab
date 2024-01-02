@@ -5,7 +5,6 @@ import torchvision
 import torchvision.transforms as transforms
 from Dataset import Dataset
 from Net import *
-from Net_test import *
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -60,6 +59,7 @@ for epoch in range(10):
         optimizer.step()
         # losses
         print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 100))
+        """
         mini_batch_train_losses.append(running_loss / 100)
         
         # mini_ batch test losses
@@ -89,6 +89,7 @@ for epoch in range(10):
         avg_test_loss = running_loss / len(test_loader)
         mini_batch_test_losses.append(avg_test_loss)
         mini_batch_test_accuracy.append(100.0000 * correct_test / total_test)
+        """
         
     avg_train_loss = running_loss / len(train_loader)
     
@@ -171,6 +172,28 @@ with torch.no_grad():
 print("Now Net type is {}".format(Net_type))
 print('Accuracy on test data: %.4f %%' % (100 * correct / total))
 
+total = 0 
+correct = 0
+
+
+with torch.no_grad():
+    
+    for i, data in enumerate(test_loader, 0):
+        
+        inputs, labels = data
+        
+        inputs, labels = inputs.to(device), labels.to(device)
+
+        outputs = model(inputs)
+
+        _, predicted = torch.max(outputs.data, 1)
+
+        total += labels.size(0)
+
+        correct += (predicted == labels).sum().item()
+
+print('Accuracy on train data: %.4f %%' % (100 * correct / total))
+
 # draw losses
 plt.figure(figsize=(12, 4))
 plt.subplot(1, 2, 1)
@@ -203,7 +226,7 @@ plt.legend()
 plt.savefig(f'./pictures/test_accuracy_per_epoch_{Net_type}.png')
 #plt.show()
 
-
+"""
 # draw mini batch losses
 plt.figure(figsize=(12, 4))
 plt.subplot(1, 2, 1)
@@ -214,3 +237,4 @@ plt.ylabel('Loss')
 plt.title('Mini batch Training and Test Loss')
 plt.legend()
 plt.savefig(f'./pictures/mini_batch_losses_{Net_type}.png')
+"""
