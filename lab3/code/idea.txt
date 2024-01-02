@@ -1,0 +1,23 @@
+网络架构
+
+输入层：
+输入包含两张独立的MNIST图片，每张图片的大小通常为28x28像素。
+
+特征提取层：
+使用卷积层和池化层提取每张图片的特征。这些层可以共享权重，意味着对两张图片使用相同的卷积和池化操作，以保证对图片的处理是一致的。
+
+连接层：
+将两张图片的特征合并。这可以通过简单的拼接、相减、元素乘（Hadamard乘积）等方式实现。选择合适的方法将对网络的性能产生重要影响。
+
+全连接层：
+使用一个或多个全连接层对合并后的特征进行处理，以学习图片特征之间的复杂关系。
+
+输出层：
+最后一层为单个神经元，使用Sigmoid激活函数。这个神经元的输出是一个介于0和1之间的值，表示两张图片是否属于同一个数字。
+
+
+数据集处理：
+这是我的数据集的获取方式
+train_dataset = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
+test_dataset = datasets.MNIST(root='./data', train=False, download=True, transform=transform)
+我需要将训练集的train_sample两两组合，如果它们的label相同，则new_label为1，如果不同为0,并且获得新的训练集,每个sample就是两两组合起来的mnist图片,然后对应的label为上述所得
