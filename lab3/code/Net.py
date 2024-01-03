@@ -94,12 +94,11 @@ class SiameseNet(nn.Module):
         )
 
         self.fc = nn.Sequential(
-            nn.Linear(64 * 4 * 4, 500),
+            nn.Linear(64 * 4 * 4, 256),
             nn.ReLU(inplace=True),
-            nn.Linear(500, 10),
+            nn.Linear(256, 256),
             nn.ReLU(inplace=True),
-            nn.Linear(10, 1),
-            nn.Sigmoid()
+            nn.Linear(256, 2)
         )
 
     def forward_once(self, x):
@@ -116,10 +115,17 @@ class SiameseNet(nn.Module):
         
         output1 = self.forward_once(x1)
         output2 = self.forward_once(x2)
-
         
-        distance = torch.abs(output1 - output2)
-        return distance
+        return output1, output2
+    
+    def euclidean_distance(self, output1, output2):
+        return torch.sqrt(torch.sum((output1 - output2) ** 2, dim=1))
+    
+    def eval(self, output1, output2, threshold=0.01):
+        distance = self.euclidean_distance(output1, output2)
+        predictions = distance < threshold
+        return predictions.int()
+
 
 
 class SiameseNet_Residual(nn.Module):
@@ -182,5 +188,18 @@ class SiameseNet_Residual(nn.Module):
 
         
         distance = torch.abs(output1 - output2)
-        return distance
-    
+        return 1 - distance
+
+class ContrastiveLoss(nn.Module):
+    def __init__(self, margin=2.0):
+        super(ContrastiveLoss, self).__init__()
+        self.margin = margin
+
+    def forward(self, output1, output2, label):
+        euclidean_distance = nn.functional.pairwise_distance(output1, output2)
+        loss_contrastive = torch.mean((1 - label) * torch.pow(euclidean_distance, 2) +
+                                      (label) * torch.pow(torch.clamp(self.margin - euclidean_distance, min=0.0), 2))
+        return loss_contrastive
+
+
+

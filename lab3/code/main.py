@@ -8,6 +8,7 @@ from Net import *
 import matplotlib.pyplot as plt
 import numpy as np
 import argparse
+from Net import ContrastiveLoss
 
 parser = argparse.ArgumentParser()
 
@@ -45,16 +46,17 @@ else:
 model = model.to(device)
 print(next(model.parameters()).device)
 #import pdb; pdb.set_trace()
-criterion = nn.BCELoss()
+if model_type == 'Net':
+    criterion = nn.BCELoss()
+else:
+    criterion = ContrastiveLoss()
 optimizer = optim.Adam(model.parameters(), lr = 0.001)
 
 # losses record
 train_losses = []
 test_losses = []
 test_accuracy = []
-mini_batch_train_losses = []
-mini_batch_test_losses = []
-mini_batch_test_accuracy = []
+
 
 max_test_accuracy = 0.0
 
@@ -68,14 +70,16 @@ for epoch in range(nepochs):
         inputs, labels = data
         
         inputs, labels = inputs.to(device), labels.to(device)
-
-        #print(inputs.shape)
-        #import pdb; pdb.set_trace()
+        
         optimizer.zero_grad()
 
-        outputs = model(inputs)
-
-        loss = criterion(outputs, labels)
+        if model_type == 'Net':
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+        else:
+            outputs1, outputs2 = model(inputs)
+            loss = criterion(outputs1, outputs2, labels)
+        
         running_loss += loss.item()
         loss.backward()
         optimizer.step()
@@ -92,30 +96,44 @@ for epoch in range(nepochs):
     
     total_test = 0 
     correct_test = 0
-    with torch.no_grad():
-    
+    with torch.no_grad(): 
         for i, data in enumerate(test_loader, 0):
-        
+            
             inputs, labels = data
         
             inputs, labels = inputs.to(device), labels.to(device)
 
             outputs = model(inputs)
             
-            loss = criterion(outputs, labels)
+            if model_type == 'Net':
+                outputs = model(inputs)
+                loss = criterion(outputs, labels)
+                predicted = (outputs.data > 0.5).float()
+            else:
+                outputs1, outputs2 = model(inputs)
+                loss = criterion(outputs1, outputs2, labels)
+                predicted = model.eval(outputs1, outputs2)
             
             running_loss += loss.item()
             
-            predicted = (outputs.data > 0.5).float()
+            
             
             total_test += labels.size(0)
-
-            correct_test += (predicted == labels).sum().item()
+            if model_type == 'Net':
+                correct_test += (predicted == labels).sum().item()
+            else:
+                labels = labels.squeeze()
+               
+                correct_test += (predicted == labels).sum().item()
+            
+        
+        print(correct_test)
+        print(total_test)
         
         avg_test_loss = running_loss / len(test_loader)
         test_losses.append(avg_test_loss)
         test_accuracy.append(100.0000 * correct_test / total_test)
-        
+        print("epochs: %d, test_acc: %.4f" %(epoch + 1, 100.0000 * correct_test / total_test))
         if 100.0000 * correct_test / total_test > max_test_accuracy:
             max_test_accuracy =  100.0000 * correct_test / total_test
             torch.save(model.state_dict(), f'./models/best_model_{description}')
@@ -157,13 +175,21 @@ with torch.no_grad():
         
         inputs, labels = inputs.to(device), labels.to(device)
 
-        outputs = model(inputs)
-
-        predicted = (outputs.data > 0.5).float()
+        if model_type == 'Net':
+            outputs = model(inputs)
+            predicted = (outputs.data > 0.5).float()
+        else:
+            outputs1, outputs2 = model(inputs)
+            predicted = model.eval(outputs1, outputs2)
 
         total += labels.size(0)
 
-        correct += (predicted == labels).sum().item()
+        if model_type == 'Net':
+            correct_test += (predicted == labels).sum().item()
+        else:
+            labels = labels.squeeze()
+            #print(labels.shape)
+            correct_test += (predicted == labels).sum().item()
 
 
     
@@ -184,13 +210,21 @@ with torch.no_grad():
         
         inputs, labels = inputs.to(device), labels.to(device)
 
-        outputs = model(inputs)
-
-        predicted = (outputs.data > 0.5).float()
-
+        if model_type == 'Net':
+            outputs = model(inputs)
+            predicted = (outputs.data > 0.5).float()
+        else:
+            outputs1, outputs2 = model(inputs)
+            predicted = model.eval(outputs1, outputs2)
+        
         total += labels.size(0)
 
-        correct += (predicted == labels).sum().item()
+        if model_type == 'Net':
+            correct_test += (predicted == labels).sum().item()
+        else:
+            labels = labels.squeeze()
+            #print(labels.shape)
+            correct_test += (predicted == labels).sum().item()
 
 print('Accuracy on train data: %.4f %%' % (100 * correct / total))
 
